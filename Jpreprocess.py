@@ -16,7 +16,7 @@ def nib_load(file_name):
     if not os.path.exists(file_name):
         print('Invalid file name, can not find the nii.gz file!')
     proxy = nib.load(file_name)
-    data = proxy.get_data()
+    data = np.asanyarray(proxy.dataobj)
     proxy.uncache()
     return data
 
