@@ -58,10 +58,10 @@ class MCriterion:
         else:
             print("There is no GPU available, and the target will remain on the CPU")
         if self.datasets_flag == "JCMNet_BraTS_New":
-            DSC, SDC = JCMNet_BraTS_New(output, target, self.data)
+            DSC, SDC, per_region = JCMNet_BraTS_New(output, target, self.data)
         else:
             raise TypeError("MCriterion：datasets_flag not existing")
-        return DSC, SDC
+        return DSC, SDC, per_region
 
     def BraTS_124toETTCWT_tensor(self, y_pred_hot, y_hot):
         o, t = y_pred_hot.clone(), y_hot.clone()
@@ -89,7 +89,12 @@ class MCriterion:
         tc_sdc = torch.where(torch.isnan(tc_sdc), torch.tensor(0).to(tc_sdc.device), tc_sdc)
         wt_sdc = torch.where(torch.isnan(wt_sdc), torch.tensor(0).to(wt_sdc.device), wt_sdc)
         SDC = (et_sdc + tc_sdc + wt_sdc) / 3
-        return DSC.cpu().detach().numpy(), SDC.cpu().detach().numpy()
+        per_region = {
+            'ET': et_dice.cpu().detach().numpy(),
+            'TC': tc_dice.cpu().detach().numpy(),
+            'WT': wt_dice.cpu().detach().numpy(),
+        }
+        return DSC.cpu().detach().numpy(), SDC.cpu().detach().numpy(), per_region
 
     def calculate_BraTS_list1_averages(self, lists):
         sum1 = 0.0
@@ -169,7 +174,7 @@ def JCMNet_BraTS_New(output, target, data):
 
     tensorCopy = mc_inter.BraTS_124toETTCWT_tensor(output_tohot, target_tohot)
 
-    item_dsc, item_sdc = mc_inter.BraTS_DSC_SDC(tensorCopy)
+    item_dsc, item_sdc, per_region = mc_inter.BraTS_DSC_SDC(tensorCopy)
 
     data.dice_ETTCWT_MEAN_sum += item_dsc,
     DSC = mc_inter.calculate_BraTS_list1_averages(data.dice_ETTCWT_MEAN_sum)
@@ -178,7 +183,7 @@ def JCMNet_BraTS_New(output, target, data):
     data.sdc_ETTCWT_MEAN_sum += item_sdc,
     SDC = mc_inter.calculate_BraTS_list1_averages(data.sdc_ETTCWT_MEAN_sum)
     print(GREEN + "As of now SDC_ETTCWT_MEAN_avg: " + str(SDC), end="\n")
-    return DSC, SDC
+    return DSC, SDC, per_region
 
 
 """MCriterion Release

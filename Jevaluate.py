@@ -66,12 +66,24 @@ def parameter_status(m):
 def evaluate(model, eval_loader):
     mc_eval = MCriterion(include_background=True, datasets_flag="JCMNet_BraTS_New", data=MCriterionData())
     DSC, SDC = None, None
+    et_sum, tc_sum, wt_sum = 0.0, 0.0, 0.0
+    n = 0
     for i, (input, target) in enumerate(eval_loader):
         print('-------------------------------' + str(i) + '------------------------------------')
         input = input.cuda()
         target = target.cuda()
         output = model(input)
-        DSC, SDC = mc_eval(output, target)
+        DSC, SDC, per_region = mc_eval(output, target)
+        et_sum += float(per_region['ET'])
+        tc_sum += float(per_region['TC'])
+        wt_sum += float(per_region['WT'])
+        n += 1
+    if n > 0:
+        print(f"\n===== Final Results (n={n}) =====")
+        print(f"ET  Dice: {et_sum / n:.4f}")
+        print(f"TC  Dice: {tc_sum / n:.4f}")
+        print(f"WT  Dice: {wt_sum / n:.4f}")
+        print(f"Mean Dice: {(et_sum + tc_sum + wt_sum) / (3 * n):.4f}")
     return DSC, SDC
 
 
